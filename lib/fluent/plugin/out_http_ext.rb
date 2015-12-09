@@ -41,6 +41,9 @@ class Fluent::HTTPOutput < Fluent::Output
   # true | false
   config_param :use_ssl, :bool, :default => false
 
+  # true | false
+  config_param :verify_ssl, :bool, :default => true
+
   # Simple rate limiting: ignore any records within `rate_limit_msec`
   # since the last one.
   config_param :rate_limit_msec, :integer, :default => 0
@@ -154,6 +157,9 @@ class Fluent::HTTPOutput < Fluent::Output
       if @use_ssl
         client.use_ssl = true
         client.ca_file = OpenSSL::X509::DEFAULT_CERT_FILE
+        unless @verify_ssl
+          client.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        end
       end
       res = client.start {|http| http.request(req) }
     rescue => e # rescue all StandardErrors
