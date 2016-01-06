@@ -15,6 +15,8 @@ A generic [fluentd][1] output plugin for sending logs to an HTTP endpoint
       http_method           put                                  # default: post
       serializer            json                                 # default: form
       rate_limit_msec       100                                  # default: 0 = no rate limiting
+      open_timeout          5                                    # default: nil = no timeout
+      read_timeout          10                                   # default: 60
       raise_on_error        false                                # default: true
       raise_on_http_failure true                                 # default: false
       authentication        basic                                # default: none
