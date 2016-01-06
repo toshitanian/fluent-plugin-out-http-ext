@@ -326,7 +326,8 @@ class HTTPOutputTest < HTTPOutputTestBase
   def test_read_timeout
     d = create_driver CONFIG_READ_TIMEOUT
     assert_equal 7, d.instance.read_timeout
-    assert_raise Timeout::Error do
+    err = Net.const_defined?(:ReadTimeout) ? Net::ReadTimeout : Timeout::Error
+    assert_raise err do
       d.emit({})
       d.run
     end
