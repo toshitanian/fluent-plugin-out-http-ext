@@ -379,4 +379,34 @@ class HTTPOutputTest < HTTPOutputTestBase
     assert_equal 2, @prohibited
   end
 
+  def test_status_code_parser()
+    StatusCodeParser.convert("400..409")
+    StatusCodeParser.convert("400..409,300")
+    StatusCodeParser.convert("300,400..409")
+    StatusCodeParser.convert("404,409")
+    StatusCodeParser.convert("404,409,300..303")
+    StatusCodeParser.convert("409")
+    StatusCodeParser.convert("")
+    assert_raise do
+       StatusCodeParser.convert_range_str_to_range("400...499")
+    end
+    assert_raise do
+      StatusCodeParser.convert_range_str_to_range("10..20")
+    end
+    assert_raise do
+      StatusCodeParser.convert_range_str_to_range("4XX")
+    end
+    assert_raise do
+      StatusCodeParser.convert_range_str_to_range("4XX..5XX")
+    end
+    assert_raise do
+      StatusCodeParser.convert_range_str_to_range("200.0..400")
+    end
+    assert_raise do
+      StatusCodeParser.convert_range_str_to_range("-200..400")
+    end
+
+  end
+
+
 end

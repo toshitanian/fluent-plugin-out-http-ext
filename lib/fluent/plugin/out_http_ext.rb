@@ -19,6 +19,39 @@ class Hash
 
 end
 
+class StatusCodeParser
+  """
+  parse status code string to array of codes
+  """
+  def self.range?(str)
+     # i.e. 200..399 => return true
+    return /^\d{3}..\d{3}$/ =~ str ? true : false
+  end
+
+  def self.number?(str)
+    return /^\d{3}$/ =~ str ? true : false
+  end
+
+  def self.get_array(str)
+    if self.range?(str)
+      ends = str.split('..').map{|d| Integer(d)}
+      return (ends[0]..ends[1]).to_a
+    elsif self.number?(str)
+      return [str.to_i]
+    else
+      raise "invalid status code range format"
+    end
+  end
+  def self.convert(range_str)
+    elems = range_str.split(',')
+    status_codes = []
+    elems.each{|elem|
+      status_codes += self.get_array(elem)
+    }
+    return status_codes
+  end
+end
+
 class Fluent::HTTPOutput < Fluent::Output
   Fluent::Plugin.register_output('http_ext', self)
 
@@ -75,6 +108,12 @@ class Fluent::HTTPOutput < Fluent::Output
                   else
                     :post
                   end
+
+    @ignore_http_status_code = if @ignore_http_status_code.nil?
+                                 []
+                               else
+                                 StatusCodeParser.convert(@ignore_http_status_code)
+                               end
 
     @auth = case @authentication
             when 'basic' then :basic
@@ -178,7 +217,10 @@ class Fluent::HTTPOutput < Fluent::Output
                         end
           warning = "failed to #{req.method} #{uri} (#{res_summary})"
           $log.warn warning
-          raise warning if @raise_on_http_failure
+          if @raise_on_http_failure
+            raise warning
+          end
+
        end #end unless
     end # end begin
   end # end send_request
