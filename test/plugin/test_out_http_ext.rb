@@ -70,8 +70,9 @@ class HTTPOutputTestBase < Test::Unit::TestCase
           res.body = 'slow_10'
         }
         srv.mount_proc('/status_code') { |req,res|
-          code = Hash[*(req.body.split('&').map{|kv|kv.split('=')}.flatten)][:code].to_i
-          res.status = code
+          r = Yajl.load(req.body)
+          code = r["code"]
+          res.status = code.to_s
           res.body = ''
         }
 
@@ -194,18 +195,26 @@ class HTTPOutputTest < HTTPOutputTestBase
     read_timeout 7
   ]
   CONFIG_IGNORE_NONE = %[
-    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
   ]
   CONFIG_IGNORE_409 = %[
-    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
     ignore_http_status_code 409
   ]
   CONFIG_IGNORE_4XX = %[
-    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
     ignore_http_status_code 400..499
   ]
   CONFIG_IGNORE_4XX_5XX = %[
-    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
     ignore_http_status_code 400..599
   ]
 
@@ -365,38 +374,68 @@ class HTTPOutputTest < HTTPOutputTestBase
     d = create_driver CONFIG_IGNORE_NONE
     assert_equal [], d.instance.ignore_http_status_code
 
-#    d.emit({})
-#    d.run
+    assert_raise do
+      d.emit({:code=> 409})
+      d.run
+    end
+
+    assert_raise do
+      d.emit({:code => 500})
+      d.run
+    end
   end
 
   def test_ignore_409
     d = create_driver CONFIG_IGNORE_409
     assert_equal [409], d.instance.ignore_http_status_code
 
-#    assert_nothing_raised do
-#      d.emit({})
-#      d.run
-#    end
+    assert_nothing_raised do
+      d.emit({:code => 409})
+      d.run
+    end
+    assert_raise do
+      d.emit({:code => 404})
+      d.run
+    end
+    assert_raise do
+      d.emit({:code => 500})
+      d.run
+    end
   end
 
   def test_ignore_4XX
     d = create_driver CONFIG_IGNORE_4XX
     assert_equal (400..499).to_a, d.instance.ignore_http_status_code
 
-#    assert_nothing_raised do
-#      d.emit({})
-#      d.run
-#    end
+    assert_nothing_raised do
+      d.emit({:code => 409})
+      d.run
+    end
+    assert_nothing_raised do
+      d.emit({:code => 404})
+      d.run
+    end
+    assert_raise do
+      d.emit({:code => 500})
+      d.run
+    end
   end
 
   def test_ignore_4XX_5XX
     d = create_driver CONFIG_IGNORE_4XX_5XX
     assert_equal (400..599).to_a, d.instance.ignore_http_status_code
-
-#    assert_nothing_raised do
-#      d.emit({})
-#      d.run
-#    end
+    assert_nothing_raised do
+      d.emit({:code => 409})
+      d.run
+    end
+    assert_nothing_raised do
+      d.emit({:code => 404})
+      d.run
+    end
+    assert_nothing_raised do
+      d.emit({:code => 500})
+      d.run
+    end
   end
 
   def _current_msec
