@@ -69,6 +69,11 @@ class HTTPOutputTestBase < Test::Unit::TestCase
           res.status = 200
           res.body = 'slow_10'
         }
+        srv.mount_proc('/status_code') { |req,res|
+          code = Hash[*(req.body.split('&').map{|kv|kv.split('=')}.flatten)][:code].to_i
+          res.status = code
+          res.body = ''
+        }
 
         srv.start
       ensure
@@ -180,14 +185,28 @@ class HTTPOutputTest < HTTPOutputTestBase
     rate_limit_msec #{RATE_LIMIT_MSEC}
   ]
 
+  CONFIG_NOT_READ_TIMEOUT = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_5/
+    read_timeout 7
+  ]
   CONFIG_READ_TIMEOUT = %[
     endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_10/
     read_timeout 7
   ]
-
-  CONFIG_NOT_READ_TIMEOUT = %[
-    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_5/
-    read_timeout 7
+  CONFIG_IGNORE_NONE = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+  ]
+  CONFIG_IGNORE_409 = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    ignore_http_status_code 409
+  ]
+  CONFIG_IGNORE_4XX = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    ignore_http_status_code 400..499
+  ]
+  CONFIG_IGNORE_4XX_5XX = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code?code=409/
+    ignore_http_status_code 400..599
   ]
 
   def create_driver(conf=CONFIG, tag='test.metrics')
@@ -340,6 +359,44 @@ class HTTPOutputTest < HTTPOutputTestBase
       d.emit({})
       d.run
     end
+  end
+
+  def test_ignore_none
+    d = create_driver CONFIG_IGNORE_NONE
+    assert_equal [], d.instance.ignore_http_status_code
+
+#    d.emit({})
+#    d.run
+  end
+
+  def test_ignore_409
+    d = create_driver CONFIG_IGNORE_409
+    assert_equal [409], d.instance.ignore_http_status_code
+
+#    assert_nothing_raised do
+#      d.emit({})
+#      d.run
+#    end
+  end
+
+  def test_ignore_4XX
+    d = create_driver CONFIG_IGNORE_4XX
+    assert_equal (400..499).to_a, d.instance.ignore_http_status_code
+
+#    assert_nothing_raised do
+#      d.emit({})
+#      d.run
+#    end
+  end
+
+  def test_ignore_4XX_5XX
+    d = create_driver CONFIG_IGNORE_4XX_5XX
+    assert_equal (400..599).to_a, d.instance.ignore_http_status_code
+
+#    assert_nothing_raised do
+#      d.emit({})
+#      d.run
+#    end
   end
 
   def _current_msec

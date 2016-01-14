@@ -86,7 +86,7 @@ class Fluent::HTTPOutput < Fluent::Output
 
   # Raise errors when HTTP response code was not successful.
   config_param :raise_on_http_failure, :bool, :default => false
-
+  config_param :ignore_http_status_code, :string, :default => nil
   # nil | 'none' | 'basic'
   config_param :authentication, :string, :default => nil
   config_param :username, :string, :default => ''
