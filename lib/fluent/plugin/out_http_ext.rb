@@ -51,12 +51,12 @@ class StatusCodeParser
       raise "invalid status code range format"
     end
   end
+
   def self.convert(range_str)
     elems = range_str.split(',')
-    status_codes = []
-    elems.each{|elem|
-      status_codes += self.get_array(elem)
-    }
+    status_codes = elems.flat_map do |elem|
+      self.get_array(elem)
+    end
     return status_codes.to_set
   end
 end
