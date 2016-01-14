@@ -1,3 +1,12 @@
+require 'set'
+
+class Array
+  def to_set
+    Set.new(self)
+  end
+end
+
+
 class Hash
   """
   each traverse in hash
@@ -19,6 +28,39 @@ class Hash
 
 end
 
+class StatusCodeParser
+  """
+  parse status code string to array of codes
+  """
+  def self.range?(str)
+     # i.e. 200..399 => return true
+    return /^\d{3}..\d{3}$/ =~ str ? true : false
+  end
+
+  def self.number?(str)
+    return /^\d{3}$/ =~ str ? true : false
+  end
+
+  def self.get_array(str)
+    if self.range?(str)
+      ends = str.split('..').map{|d| Integer(d)}
+      return (ends[0]..ends[1]).to_a
+    elsif self.number?(str)
+      return [str.to_i]
+    else
+      raise "invalid status code range format"
+    end
+  end
+
+  def self.convert(range_str)
+    elems = range_str.split(',')
+    status_codes = elems.flat_map do |elem|
+      self.get_array(elem)
+    end
+    return status_codes.to_set
+  end
+end
+
 class Fluent::HTTPOutput < Fluent::Output
   Fluent::Plugin.register_output('http_ext', self)
 
@@ -27,6 +69,7 @@ class Fluent::HTTPOutput < Fluent::Output
     require 'net/http'
     require 'uri'
     require 'yajl'
+    require 'set'
   end
 
   # Endpoint URL ex. localhost.local/api/
@@ -53,7 +96,7 @@ class Fluent::HTTPOutput < Fluent::Output
 
   # Raise errors when HTTP response code was not successful.
   config_param :raise_on_http_failure, :bool, :default => false
-
+  config_param :ignore_http_status_code, :string, :default => nil
   # nil | 'none' | 'basic'
   config_param :authentication, :string, :default => nil
   config_param :username, :string, :default => ''
@@ -75,6 +118,12 @@ class Fluent::HTTPOutput < Fluent::Output
                   else
                     :post
                   end
+
+    @ignore_http_status_code = if @ignore_http_status_code.nil?
+                          [].to_set
+                        else
+                          StatusCodeParser.convert(@ignore_http_status_code)
+                        end
 
     @auth = case @authentication
             when 'basic' then :basic
@@ -178,7 +227,14 @@ class Fluent::HTTPOutput < Fluent::Output
                         end
           warning = "failed to #{req.method} #{uri} (#{res_summary})"
           $log.warn warning
-          raise warning if @raise_on_http_failure
+          if @raise_on_http_failure
+            unless @ignore_http_status_code.include?(res.code.to_i)
+              raise warning
+            else
+              $log.debug "ignore http status code #{req.method}"
+            end
+          end
+
        end #end unless
     end # end begin
   end # end send_request

@@ -69,6 +69,12 @@ class HTTPOutputTestBase < Test::Unit::TestCase
           res.status = 200
           res.body = 'slow_10'
         }
+        srv.mount_proc('/status_code') { |req,res|
+          r = Yajl.load(req.body)
+          code = r["code"]
+          res.status = code.to_s
+          res.body = ''
+        }
 
         srv.start
       ensure
@@ -180,14 +186,36 @@ class HTTPOutputTest < HTTPOutputTestBase
     rate_limit_msec #{RATE_LIMIT_MSEC}
   ]
 
+  CONFIG_NOT_READ_TIMEOUT = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_5/
+    read_timeout 7
+  ]
   CONFIG_READ_TIMEOUT = %[
     endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_10/
     read_timeout 7
   ]
-
-  CONFIG_NOT_READ_TIMEOUT = %[
-    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_5/
-    read_timeout 7
+  CONFIG_IGNORE_NONE = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
+  ]
+  CONFIG_IGNORE_409 = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
+    ignore_http_status_code 409
+  ]
+  CONFIG_IGNORE_4XX = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
+    ignore_http_status_code 400..499
+  ]
+  CONFIG_IGNORE_4XX_5XX = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/status_code/
+    serializer json
+    raise_on_http_failure true
+    ignore_http_status_code 400..599
   ]
 
   def create_driver(conf=CONFIG, tag='test.metrics')
@@ -342,6 +370,74 @@ class HTTPOutputTest < HTTPOutputTestBase
     end
   end
 
+  def test_ignore_none
+    d = create_driver CONFIG_IGNORE_NONE
+    assert_equal [].to_set, d.instance.ignore_http_status_code
+
+    assert_raise do
+      d.emit({:code=> 409})
+      d.run
+    end
+
+    assert_raise do
+      d.emit({:code => 500})
+      d.run
+    end
+  end
+
+  def test_ignore_409
+    d = create_driver CONFIG_IGNORE_409
+    assert_equal [409].to_set, d.instance.ignore_http_status_code
+
+    assert_nothing_raised do
+      d.emit({:code => 409})
+      d.run
+    end
+    assert_raise do
+      d.emit({:code => 404})
+      d.run
+    end
+    assert_raise do
+      d.emit({:code => 500})
+      d.run
+    end
+  end
+
+  def test_ignore_4XX
+    d = create_driver CONFIG_IGNORE_4XX
+    assert_equal (400..499).to_a.to_set, d.instance.ignore_http_status_code
+
+    assert_nothing_raised do
+      d.emit({:code => 409})
+      d.run
+    end
+    assert_nothing_raised do
+      d.emit({:code => 404})
+      d.run
+    end
+    assert_raise do
+      d.emit({:code => 500})
+      d.run
+    end
+  end
+
+  def test_ignore_4XX_5XX
+    d = create_driver CONFIG_IGNORE_4XX_5XX
+    assert_equal (400..599).to_a.to_set, d.instance.ignore_http_status_code
+    assert_nothing_raised do
+      d.emit({:code => 409})
+      d.run
+    end
+    assert_nothing_raised do
+      d.emit({:code => 404})
+      d.run
+    end
+    assert_nothing_raised do
+      d.emit({:code => 500})
+      d.run
+    end
+  end
+
   def _current_msec
     Time.now.to_f * 1000
   end
@@ -379,4 +475,37 @@ class HTTPOutputTest < HTTPOutputTestBase
     assert_equal 2, @prohibited
   end
 
+  def test_status_code_parser()
+    assert_equal (400..409).to_a.to_set, StatusCodeParser.convert("400..409")
+    assert_equal ((400..409).to_a + [300]).to_set, StatusCodeParser.convert("400..409,300")
+    assert_equal ((400..409).to_a + [300]).to_set, StatusCodeParser.convert("300,400..409")
+    assert_equal [404, 409].to_set, StatusCodeParser.convert("404,409")
+    assert_equal [404, 409, 300, 301, 302, 303].to_set, StatusCodeParser.convert("404,409,300..303")
+    assert_equal [409].to_set, StatusCodeParser.convert("409")
+    assert_equal [].to_set, StatusCodeParser.convert("")
+    assert_raise do
+       StatusCodeParser.convert("400...499")
+    end
+    assert_raise do
+      StatusCodeParser.convert("10..20")
+    end
+    assert_raise do
+      StatusCodeParser.convert("4XX")
+    end
+    assert_raise do
+      StatusCodeParser.convert("4XX..5XX")
+    end
+    assert_raise do
+      StatusCodeParser.convert("200.0..400")
+    end
+    assert_raise do
+      StatusCodeParser.convert("-200..400")
+    end
+
+  end
+
+  def test_array_extend
+    assert_equal [].to_set, Set.new([])
+    assert_equal [1, 2].to_set, Set.new([1, 2])
+  end
 end
