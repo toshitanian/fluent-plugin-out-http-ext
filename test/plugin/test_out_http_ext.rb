@@ -59,6 +59,17 @@ class HTTPOutputTestBase < Test::Unit::TestCase
           res.status = 200
           res.body = 'running'
         }
+        srv.mount_proc('/slow_5') { |req,res|
+          sleep 5
+          res.status = 200
+          res.body = 'slow_5'
+        }
+        srv.mount_proc('/slow_10') { |req,res|
+          sleep 10
+          res.status = 200
+          res.body = 'slow_10'
+        }
+
         srv.start
       ensure
         srv.shutdown
@@ -167,6 +178,16 @@ class HTTPOutputTest < HTTPOutputTestBase
   CONFIG_RATE_LIMIT = %[
     endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/api/
     rate_limit_msec #{RATE_LIMIT_MSEC}
+  ]
+
+  CONFIG_READ_TIMEOUT = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_10/
+    read_timeout 7
+  ]
+
+  CONFIG_NOT_READ_TIMEOUT = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/slow_5/
+    read_timeout 7
   ]
 
   def create_driver(conf=CONFIG, tag='test.metrics')
@@ -300,6 +321,25 @@ class HTTPOutputTest < HTTPOutputTestBase
     d.emit(record)
     d.run
     assert_equal 2, @posts.size
+  end
+
+  def test_read_timeout
+    d = create_driver CONFIG_READ_TIMEOUT
+    assert_equal 7, d.instance.read_timeout
+    err = Net.const_defined?(:ReadTimeout) ? Net::ReadTimeout : Timeout::Error
+    assert_raise err do
+      d.emit({})
+      d.run
+    end
+  end
+
+  def test_not_read_timeout
+    d = create_driver CONFIG_NOT_READ_TIMEOUT
+    assert_equal 7, d.instance.read_timeout
+    assert_nothing_raised do
+      d.emit({})
+      d.run
+    end
   end
 
   def _current_msec

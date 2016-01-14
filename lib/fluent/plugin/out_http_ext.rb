@@ -41,6 +41,9 @@ class Fluent::HTTPOutput < Fluent::Output
   # true | false
   config_param :use_ssl, :bool, :default => false
 
+  config_param :open_timeout, :integer, :default => nil
+  config_param :read_timeout, :integer, :default => 60
+
   # Simple rate limiting: ignore any records within `rate_limit_msec`
   # since the last one.
   config_param :rate_limit_msec, :integer, :default => 0
@@ -50,7 +53,6 @@ class Fluent::HTTPOutput < Fluent::Output
 
   # Raise errors when HTTP response code was not successful.
   config_param :raise_on_http_failure, :bool, :default => false
-
 
   # nil | 'none' | 'basic'
   config_param :authentication, :string, :default => nil
@@ -158,7 +160,11 @@ class Fluent::HTTPOutput < Fluent::Output
         client.use_ssl = true
         client.ca_file = OpenSSL::X509::DEFAULT_CERT_FILE
       end
-      res = client.start {|http| http.request(req) }
+      res = client.start {|http|
+        http.open_timeout = @open_timeout
+        http.read_timeout = @read_timeout
+        http.request(req)
+      }
     rescue => e # rescue all StandardErrors
       # server didn't respond
       $log.warn "Net::HTTP.#{req.method.capitalize} raises exception: #{e.class}, '#{e.message}'"
