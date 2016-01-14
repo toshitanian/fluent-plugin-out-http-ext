@@ -1,3 +1,12 @@
+require 'set'
+
+class Array
+  def to_set
+    Set.new(self)
+  end
+end
+
+
 class Hash
   """
   each traverse in hash
@@ -48,7 +57,7 @@ class StatusCodeParser
     elems.each{|elem|
       status_codes += self.get_array(elem)
     }
-    return status_codes
+    return status_codes.to_set
   end
 end
 
@@ -60,6 +69,7 @@ class Fluent::HTTPOutput < Fluent::Output
     require 'net/http'
     require 'uri'
     require 'yajl'
+    require 'set'
   end
 
   # Endpoint URL ex. localhost.local/api/
@@ -110,10 +120,10 @@ class Fluent::HTTPOutput < Fluent::Output
                   end
 
     @ignore_http_status_code = if @ignore_http_status_code.nil?
-                                 []
-                               else
-                                 StatusCodeParser.convert(@ignore_http_status_code)
-                               end
+                          [].to_set
+                        else
+                          StatusCodeParser.convert(@ignore_http_status_code)
+                        end
 
     @auth = case @authentication
             when 'basic' then :basic
