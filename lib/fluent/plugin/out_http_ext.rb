@@ -225,7 +225,7 @@ class Fluent::HTTPOutput < Fluent::Output
                         else
                            "res=nil"
                         end
-          warning = "failed to #{req.method} #{uri} (#{res_summary})"
+          warning = "failed to #{req.method} #{req.to_hash.inspect} #{uri} (#{res_summary})"
           $log.warn warning
           if @raise_on_http_failure
             unless @ignore_http_status_code.include?(res.code.to_i)
