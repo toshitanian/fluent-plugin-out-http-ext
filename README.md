@@ -19,7 +19,7 @@ A generic [fluentd][1] output plugin for sending logs to an HTTP endpoint
       read_timeout          10                                   # default: 60
       raise_on_error        false                                # default: true
       raise_on_http_failure true                                 # default: false
-      ignore_http_status_code 300,400..499                        # default: nil # do not raise on these http_hstatus codes
+      ignore_http_status_code 300,400..499                        # default: nil # do not raise on these http_status codes
       authentication        basic                                # default: none
       username              alice                                # default: ''
       password              bobpop                               # default: '', secret: true
