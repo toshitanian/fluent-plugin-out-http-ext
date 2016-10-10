@@ -35,6 +35,25 @@ A generic [fluentd][1] output plugin for sending logs to an HTTP endpoint
 
 If you'd like to retry failed requests, consider using [fluent-plugin-bufferize][3].
 
+## how to release
+
+**Include these changes to pull request**
+
+- update `CHANGELOG.md`
+- update `README.md`
+
+**After master is updated**
+
+```
+# bump `gem.version` in `fluent-plugin-out-http-ext.gemspec`
+
+# upload to rubygems
+$ bundle exec rake release
+
+# push updates
+$ git push --follow-tags
+```
+
 ----
 
 Heavily based on [fluent-plugin-growthforecast][2]
