@@ -49,9 +49,6 @@ If you'd like to retry failed requests, consider using [fluent-plugin-bufferize]
 
 # upload to rubygems
 $ bundle exec rake release
-
-# push updates
-$ git push --follow-tags
 ```
 
 ----
