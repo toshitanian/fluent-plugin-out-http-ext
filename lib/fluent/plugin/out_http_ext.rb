@@ -86,6 +86,7 @@ class Fluent::HTTPOutput < Fluent::Output
 
   config_param :open_timeout, :integer, :default => nil
   config_param :read_timeout, :integer, :default => 60
+  config_param :verify_ssl, :bool, :default => true
 
   # Simple rate limiting: ignore any records within `rate_limit_msec`
   # since the last one.
@@ -208,6 +209,9 @@ class Fluent::HTTPOutput < Fluent::Output
       if @use_ssl
         client.use_ssl = true
         client.ca_file = OpenSSL::X509::DEFAULT_CERT_FILE
+        unless @verify_ssl
+          client.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        end
       end
       res = client.start {|http|
         http.open_timeout = @open_timeout

@@ -19,11 +19,12 @@ A generic [fluentd][1] output plugin for sending logs to an HTTP endpoint
       read_timeout          10                                   # default: 60
       raise_on_error        false                                # default: true
       raise_on_http_failure true                                 # default: false
-      ignore_http_status_code 300,400..499                        # default: nil # do not raise on these http_hstatus codes
+      ignore_http_status_code 300,400..499                        # default: nil # do not raise on these http_status codes
       authentication        basic                                # default: none
       username              alice                                # default: ''
       password              bobpop                               # default: '', secret: true
       use_ssl               true                                 # default: false
+      verify_ssl            false                                # default: true
       <headers>
         HeaderExample1 header1
         HeaderExample2 header2
@@ -33,6 +34,25 @@ A generic [fluentd][1] output plugin for sending logs to an HTTP endpoint
 ## Usage notes
 
 If you'd like to retry failed requests, consider using [fluent-plugin-bufferize][3].
+
+## how to release
+
+**Include these changes to pull request**
+
+- update `CHANGELOG.md`
+- update `README.md`
+
+**After master is updated**
+
+```
+# bump `gem.version` in `fluent-plugin-out-http-ext.gemspec`
+
+# upload to rubygems
+$ bundle exec rake release
+
+# push updates
+$ git push --follow-tags
+```
 
 ----
 

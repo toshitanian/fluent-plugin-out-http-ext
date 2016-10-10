@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8
+* Add verify ssl option
+* Restrict ruby version to more than 2.1.0
+
+## 0.1.7
+* Specify http status codes with witch this plugin does not raise error
+
+
 ## 0.1.5
 * Add headers directive
 * Add use_ssl directive
