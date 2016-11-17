@@ -271,7 +271,7 @@ class HTTPOutputTest < HTTPOutputTestBase
     assert_equal 2, @puts.size
   end
 
-  def test_emit_json
+  def test_emit_json_object
     binary_string = "あ"
     d = create_driver CONFIG_JSON
     d.emit({ 'field1' => 50, 'field2' => 20, 'field3' => 10, 'otherfield' => 1, 'binary' => binary_string })
@@ -285,6 +285,21 @@ class HTTPOutputTest < HTTPOutputTestBase
     assert_equal 10, record[:json]['field3']
     assert_equal 1, record[:json]['otherfield']
     assert_equal binary_string, record[:json]['binary']
+    assert_nil record[:auth]
+  end
+
+  def test_emit_json_array
+    binary_string = "あ"
+    d = create_driver CONFIG_JSON
+    d.emit([ 5, binary_string, 30 ])
+    d.run
+
+    assert_equal 1, @posts.size
+    record = @posts[0]
+
+    assert_equal 5, record[:json][0]
+    assert_equal binary_string, record[:json][1]
+    assert_equal 30, record[:json][2]
     assert_nil record[:auth]
   end
 
