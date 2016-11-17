@@ -155,6 +155,7 @@ class Fluent::HTTPOutput < Fluent::Output
       /test/<hash.data> =(use {hash:{data:2}})> /test/2
     '''
     result_url = @endpoint_url
+    return result_url unless record.is_a? Hash
     record.each_deep do |key_dir, value|
       result_url = result_url.gsub(/<#{key_dir.join(".")}>/, value.to_s)
     end
