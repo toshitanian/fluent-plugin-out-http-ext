@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.9
+* accept array request body
+
 ## 0.1.8
 * Add verify ssl option
 * Restrict ruby version to more than 2.1.0
