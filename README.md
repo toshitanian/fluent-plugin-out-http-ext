@@ -25,6 +25,7 @@ A generic [fluentd][1] output plugin for sending logs to an HTTP endpoint
       password              bobpop                               # default: '', secret: true
       use_ssl               true                                 # default: false
       verify_ssl            false                                # default: true
+      format                <formatter>                          # default: '', <formatter> is the name of your formatter plugin
       <headers>
         HeaderExample1 header1
         HeaderExample2 header2
