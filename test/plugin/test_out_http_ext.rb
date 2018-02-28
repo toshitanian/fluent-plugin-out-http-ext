@@ -218,6 +218,12 @@ class HTTPOutputTest < HTTPOutputTestBase
     ignore_http_status_code 400..599
   ]
 
+  CONFIG_CUSTOM_FORMATTER = %[
+    endpoint_url http://127.0.0.1:#{TEST_LISTEN_PORT}/api/
+    serializer json
+    format test_formatter
+  ]
+
   def create_driver(conf=CONFIG, tag='test.metrics')
     Fluent::Test::OutputTestDriver.new(Fluent::HTTPOutput, tag).configure(conf)
   end
@@ -522,5 +528,16 @@ class HTTPOutputTest < HTTPOutputTestBase
   def test_array_extend
     assert_equal [].to_set, Set.new([])
     assert_equal [1, 2].to_set, Set.new([1, 2])
+  end
+
+  def test_custom_formatter
+    d = create_driver CONFIG_CUSTOM_FORMATTER
+    payload = {"field" => 1}
+    d.emit(payload)
+    d.run
+
+    record = @posts[0]
+    assert_equal record[:json]["wrapped"], true
+    assert_equal record[:json]["record"], payload
   end
 end
