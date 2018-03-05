@@ -103,6 +103,8 @@ class Fluent::HTTPOutput < Fluent::Output
   config_param :username, :string, :default => ''
   config_param :password, :string, :default => '', :secret => true
 
+  config_param :format, :string, :default => ''
+
   def configure(conf)
     super
 
@@ -136,6 +138,12 @@ class Fluent::HTTPOutput < Fluent::Output
       if element.name == 'headers'
         @headers = element.to_hash
       end
+    end
+
+    @formatter = nil
+    unless @format.empty?
+      @formatter = Fluent::Plugin.new_formatter(@format)
+      @formatter.configure(conf)
     end
   end
 
@@ -251,6 +259,9 @@ class Fluent::HTTPOutput < Fluent::Output
 
   def emit(tag, es, chain)
     es.each do |time, record|
+      if @formatter
+        record = @formatter.format(tag, time, record)
+      end
       handle_record(tag, time, record)
     end
     chain.next
