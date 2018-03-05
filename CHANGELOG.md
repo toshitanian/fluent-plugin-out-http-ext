@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.10
+* Add custom formatter support
+
 ## 0.1.9
 * accept array request body
 
