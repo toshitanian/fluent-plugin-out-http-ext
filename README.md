@@ -1,3 +1,5 @@
+**This repo is deprecated. Please use [fluent-plugins-nursery/fluent-plugin-out-http](https://github.com/fluent-plugins-nursery/fluent-plugin-out-http)**
+
 # fluent-plugin-out-http-ext, a plugin for [Fluentd](http://fluentd.org)
 
 [![Build Status](https://travis-ci.org/kawasakitoshiya/fluent-plugin-out-http-ext.svg)](https://travis-ci.org/kawasakitoshiya/fluent-plugin-out-http-ext)
